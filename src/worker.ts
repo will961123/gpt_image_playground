@@ -1,13 +1,9 @@
 interface Env {
+  ASSETS: {
+    fetch(request: Request | URL | string): Promise<Response>
+  }
   UPSTREAM_API_BASE_URL?: string
 }
-
-interface PagesFunctionContext {
-  env: Env
-  request: Request
-}
-
-type PagesFunction = (context: PagesFunctionContext) => Promise<Response> | Response
 
 function splitPath(pathname: string): string[] {
   return pathname.split('/').filter(Boolean)
@@ -40,10 +36,11 @@ function buildUpstreamUrl(upstreamBaseUrl: string, requestPathname: string, sear
 }
 
 function createProxyRequest(request: Request, targetUrl: URL): Request {
+  const requestUrl = new URL(request.url)
   const headers = new Headers(request.headers)
   headers.set('host', targetUrl.host)
-  headers.set('x-forwarded-host', new URL(request.url).host)
-  headers.set('x-forwarded-proto', new URL(request.url).protocol.replace(':', ''))
+  headers.set('x-forwarded-host', requestUrl.host)
+  headers.set('x-forwarded-proto', requestUrl.protocol.replace(':', ''))
 
   return new Request(targetUrl, {
     method: request.method,
@@ -53,7 +50,7 @@ function createProxyRequest(request: Request, targetUrl: URL): Request {
   })
 }
 
-export const onRequest: PagesFunction = async ({ env, request }) => {
+async function handleApiProxy(request: Request, env: Env): Promise<Response> {
   const upstreamBaseUrl = env.UPSTREAM_API_BASE_URL?.trim().replace(/\/+$/, '')
   if (!upstreamBaseUrl) {
     return new Response('Missing UPSTREAM_API_BASE_URL', { status: 500 })
@@ -73,6 +70,17 @@ export const onRequest: PagesFunction = async ({ env, request }) => {
     : requestUrl.pathname
 
   const targetUrl = buildUpstreamUrl(upstreamOrigin.toString(), upstreamPathname, requestUrl.search)
-  const proxyRequest = createProxyRequest(request, targetUrl)
-  return fetch(proxyRequest)
+  return fetch(createProxyRequest(request, targetUrl))
+}
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const { pathname } = new URL(request.url)
+
+    if (pathname.startsWith('/api-proxy/')) {
+      return handleApiProxy(request, env)
+    }
+
+    return env.ASSETS.fetch(request)
+  },
 }
