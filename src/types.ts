@@ -15,7 +15,8 @@ export interface AppSettings {
 // export const DEFAULT_IMAGES_MODEL = 'gpt-image-2'
 // export const DEFAULT_RESPONSES_MODEL = 'gpt-5.5'
 
-const DEFAULT_BASE_URL = import.meta.env.VITE_DEFAULT_API_URL?.trim() || 'https://anyrouter.top'
+// const DEFAULT_BASE_URL = import.meta.env.VITE_DEFAULT_API_URL?.trim() || 'https://anyrouter.top'
+const DEFAULT_BASE_URL = '/api-proxy/v1'
 export const DEFAULT_IMAGES_MODEL = 'gpt-5.3-codex'
 export const DEFAULT_RESPONSES_MODEL = 'gpt-5.3-codex'
 
