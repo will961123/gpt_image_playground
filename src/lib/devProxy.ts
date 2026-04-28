@@ -10,6 +10,15 @@ export function normalizeBaseUrl(baseUrl: string): string {
   const trimmed = baseUrl.trim()
   if (!trimmed) return ''
 
+  if (trimmed.startsWith('/')) {
+    const pathSegments = trimmed.split('/').filter(Boolean)
+    const v1Index = pathSegments.indexOf('v1')
+    const normalizedSegments = v1Index >= 0
+      ? pathSegments.slice(0, v1Index + 1)
+      : [...pathSegments, 'v1']
+    return `/${normalizedSegments.join('/')}`
+  }
+
   const input = /^[a-zA-Z][a-zA-Z\d+.-]*:\/\//.test(trimmed)
     ? trimmed
     : `https://${trimmed}`
