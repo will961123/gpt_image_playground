@@ -11,6 +11,9 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api-proxy/*"]
   },
+  "vars": {
+    "UPSTREAM_API_BASE_URL": "https://anyrouter.top"
+  },
   "compatibility_flags": [
     "nodejs_compat"
   ]
