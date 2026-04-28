@@ -1,8 +1,7 @@
 import { useEffect } from 'react'
 import { initStore } from './store'
 import { useStore } from './store'
-import { normalizeBaseUrl } from './lib/api'
-import type { ApiMode } from './types'
+import { getSettingsOverridesFromSearch } from './lib/urlSettings'
 import Header from './components/Header'
 import SearchBar from './components/SearchBar'
 import TaskGrid from './components/TaskGrid'
@@ -20,34 +19,13 @@ export default function App() {
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search)
-    const nextSettings: { baseUrl?: string; apiKey?: string; codexCli?: boolean; apiMode?: ApiMode } = {
-      codexCli: false,
-      apiMode: 'images',
+    const { hasOverrides, overrides } = getSettingsOverridesFromSearch(window.location.search)
+
+    if (hasOverrides) {
+      setSettings(overrides)
     }
 
-    const apiUrlParam = searchParams.get('apiUrl')
-    if (apiUrlParam !== null) {
-      nextSettings.baseUrl = normalizeBaseUrl(apiUrlParam.trim())
-    }
-
-    const apiKeyParam = searchParams.get('apiKey')
-    if (apiKeyParam !== null) {
-      nextSettings.apiKey = apiKeyParam.trim()
-    }
-
-    const codexCliParam = searchParams.get('codexCli')
-    if (codexCliParam !== null) {
-      nextSettings.codexCli = codexCliParam.trim().toLowerCase() === 'true'
-    }
-
-    const apiModeParam = searchParams.get('apiMode')
-    if (apiModeParam === 'images' || apiModeParam === 'responses') {
-      nextSettings.apiMode = apiModeParam
-    }
-
-    setSettings(nextSettings)
-
-    if (searchParams.has('apiUrl') || searchParams.has('apiKey') || searchParams.has('codexCli') || searchParams.has('apiMode')) {
+    if (hasOverrides) {
       searchParams.delete('apiUrl')
       searchParams.delete('apiKey')
       searchParams.delete('codexCli')

@@ -11,16 +11,21 @@ export interface AppSettings {
   codexCli: boolean
 }
 
-const DEFAULT_BASE_URL = import.meta.env.VITE_DEFAULT_API_URL?.trim() || 'https://api.openai.com/v1'
-export const DEFAULT_IMAGES_MODEL = 'gpt-image-2'
-export const DEFAULT_RESPONSES_MODEL = 'gpt-5.5'
+// const DEFAULT_BASE_URL = import.meta.env.VITE_DEFAULT_API_URL?.trim() || 'https://api.openai.com/v1'
+// export const DEFAULT_IMAGES_MODEL = 'gpt-image-2'
+// export const DEFAULT_RESPONSES_MODEL = 'gpt-5.5'
+
+const DEFAULT_BASE_URL = import.meta.env.VITE_DEFAULT_API_URL?.trim() || 'https://anyrouter.top'
+export const DEFAULT_IMAGES_MODEL = 'gpt-5.3-codex'
+export const DEFAULT_RESPONSES_MODEL = 'gpt-5.3-codex'
 
 export const DEFAULT_SETTINGS: AppSettings = {
   baseUrl: DEFAULT_BASE_URL,
   apiKey: '',
   model: DEFAULT_IMAGES_MODEL,
   timeout: 300,
-  apiMode: 'images',
+  // apiMode: 'images',
+  apiMode: 'responses',
   codexCli: false,
 }
 
