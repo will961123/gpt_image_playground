@@ -218,9 +218,84 @@ docker compose up -d
 
    > 如果 `target` 或填入的 `API URL` 已经包含了 `/v1` 路径，则同源请求的路径将不再重复拼接 `/v1`，例如会直接变为 `/api-proxy/responses`
 
-   如果需要在线上部署中使用代理，请使用 Vercel Function、Cloudflare Worker、Nginx 反向代理或自建后端等服务端方案。
+   如果需要在线上部署中使用代理，请使用 Vercel Function、Cloudflare Worker、Cloudflare Pages Functions、Nginx 反向代理或自建后端等服务端方案。`dev-proxy.config.json` 本身不会在生产环境生效。
 
-4. **构建静态产物**
+4. **Cloudflare 线上代理（可选）**
+   如果你把前端部署在 Cloudflare Pages，而第三方图片接口没有放开浏览器跨域，推荐在同一个 Cloudflare 项目里加一个同域代理，例如 `/api-proxy/*`。这样浏览器请求的仍然是你自己的站点域名，跨域请求由 Cloudflare 服务端代为发起。
+
+   请求链路如下：
+
+   ```text
+   浏览器页面 https://your-app.pages.dev
+     -> 同源请求 https://your-app.pages.dev/api-proxy/v1/images/generations
+     -> Cloudflare Pages Functions / Worker 转发
+     -> 第三方接口 https://vendor.example.com/v1/images/generations
+   ```
+
+   可以在项目中新增文件 `functions/api-proxy/[[path]].ts`：
+
+   ```ts
+   interface Env {
+     UPSTREAM_API_BASE_URL: string
+   }
+
+   export const onRequest: PagesFunction<Env> = async (context) => {
+     const upstreamBaseUrl = context.env.UPSTREAM_API_BASE_URL?.replace(/\/+$/, '')
+     if (!upstreamBaseUrl) {
+       return new Response('Missing UPSTREAM_API_BASE_URL', { status: 500 })
+     }
+
+     const requestUrl = new URL(context.request.url)
+     const proxyPrefix = '/api-proxy'
+     const upstreamPath = requestUrl.pathname.startsWith(proxyPrefix)
+       ? requestUrl.pathname.slice(proxyPrefix.length)
+       : requestUrl.pathname
+     const targetUrl = new URL(`${upstreamBaseUrl}${upstreamPath}${requestUrl.search}`)
+
+     const headers = new Headers(context.request.headers)
+     headers.set('host', targetUrl.host)
+
+     return fetch(targetUrl, {
+       method: context.request.method,
+       headers,
+       body: context.request.body,
+       redirect: 'follow',
+     })
+   }
+   ```
+
+   然后在 Cloudflare Pages 项目的环境变量中配置：
+
+   ```bash
+   UPSTREAM_API_BASE_URL=https://vendor.example.com
+   ```
+
+   如果你的上游地址本身已经包含 `/v1`，也可以写成：
+
+   ```bash
+   UPSTREAM_API_BASE_URL=https://vendor.example.com/v1
+   ```
+
+   部署完成后，在页面设置中的 `API URL` 填你自己的 Cloudflare 域名，而不是第三方供应商域名，例如：
+
+   ```text
+   https://your-app.pages.dev/api-proxy/v1
+   ```
+
+   这样前端会实际请求：
+
+   - Images API: `https://your-app.pages.dev/api-proxy/v1/images/generations`
+   - Images Edit: `https://your-app.pages.dev/api-proxy/v1/images/edits`
+   - Responses API: `https://your-app.pages.dev/api-proxy/v1/responses`
+
+   注意事项：
+
+   - 这个方案适合“前端页面和代理都部署在 Cloudflare” 的场景。
+   - 页面里的 API Key 仍会先发给你自己的 Cloudflare 代理，再由代理转发给上游接口。
+   - 如果你不希望浏览器直接持有第三方供应商的 API Key，就不要让前端传真实密钥，而应改成由代理在服务端注入上游鉴权。
+   - 如需限制滥用，建议在 Cloudflare 侧额外加鉴权、限流或来源校验。
+
+5. **构建静态产物**
    ```bash
    npm run build
    ```
@@ -243,7 +318,7 @@ docker compose up -d
 应用支持通过 URL 查询参数快速填充配置，非常适合书签或分享给他人使用：
 - `?apiUrl=https://你的代理地址.com`
 - `?apiKey=sk-xxxx`
-- `?apiMode=images` 或 `?apiMode=responses`，未传时默认使用 `images`
+- `?apiMode=images` 或 `?apiMode=responses`，未传时默认使用 `responses`
 - `?codexCli=true` 或 `?codexCli=false`，未传时默认关闭，仅 `true` 会开启 Codex CLI 模式
 
 例如：
